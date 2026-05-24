@@ -28,19 +28,34 @@ services:
     networks:
       - smarthome-network
 
+  device-api:
+    build:
+      context: ./device-api
+      dockerfile: Dockerfile
+    container_name: smarthome-device-api
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+    networks:
+      - smarthome-network
+
   app:
     build:
       context: ./smart_home
       dockerfile: Dockerfile
     container_name: smarthome-app
     depends_on:
-      postgres:
-        condition: service_healthy
+      device-api:
+        condition: service_started
       temperature-api:
         condition: service_started
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
       - TEMPERATURE_API_URL=http://temperature-api:8081
+      - DEVICE_API_URL=http://device-api:8082
     ports:
       - "8080:8080"
     restart: unless-stopped
