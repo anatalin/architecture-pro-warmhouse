@@ -97,7 +97,7 @@ app.MapMethods("/api/v1/sensors/{id:int}/value", ["PATCH"], async (int id, Value
         : Results.Ok(new { message = "Sensor value updated successfully" });
 });
 
-app.Run("http://0.0.0.0:8082");
+app.Run("http://0.0.0.0:8080");
 
 // ---------- helpers ----------
 

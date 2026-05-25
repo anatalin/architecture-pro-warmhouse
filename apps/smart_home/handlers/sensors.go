@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"smarthome/models"
 	"smarthome/services"
@@ -16,13 +17,22 @@ import (
 type SensorHandler struct {
 	DeviceService      *services.DeviceService
 	TemperatureService *services.TemperatureService
+	MQPublisher        *services.MQPublisher
+	TelemetryService   *services.TelemetryService
 }
 
 // NewSensorHandler creates a new SensorHandler
-func NewSensorHandler(deviceService *services.DeviceService, temperatureService *services.TemperatureService) *SensorHandler {
+func NewSensorHandler(
+	deviceService *services.DeviceService,
+	temperatureService *services.TemperatureService,
+	mqPublisher *services.MQPublisher,
+	telemetryService *services.TelemetryService,
+) *SensorHandler {
 	return &SensorHandler{
 		DeviceService:      deviceService,
 		TemperatureService: temperatureService,
+		MQPublisher:        mqPublisher,
+		TelemetryService:   telemetryService,
 	}
 }
 
@@ -36,6 +46,7 @@ func (h *SensorHandler) RegisterRoutes(router *gin.RouterGroup) {
 		sensors.PUT("/:id", h.UpdateSensor)
 		sensors.DELETE("/:id", h.DeleteSensor)
 		sensors.PATCH("/:id/value", h.UpdateSensorValue)
+		sensors.GET("/:id/telemetry", h.GetTelemetry)
 		sensors.GET("/temperature/:location", h.GetTemperatureByLocation)
 	}
 }
@@ -203,5 +214,38 @@ func (h *SensorHandler) UpdateSensorValue(c *gin.Context) {
 		return
 	}
 
+	if err := h.MQPublisher.Publish(id, request.Value, request.Status); err != nil {
+		log.Printf("Failed to publish telemetry for sensor %d: %v", id, err)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Sensor value updated successfully"})
+}
+
+// GetTelemetry handles GET /api/v1/sensors/:id/telemetry?from=<RFC3339>&to=<RFC3339>
+func (h *SensorHandler) GetTelemetry(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sensor ID"})
+		return
+	}
+
+	from, err := time.Parse(time.RFC3339, c.Query("from"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'from' timestamp, expected RFC3339"})
+		return
+	}
+
+	to, err := time.Parse(time.RFC3339, c.Query("to"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'to' timestamp, expected RFC3339"})
+		return
+	}
+
+	records, err := h.TelemetryService.GetTelemetry(id, from, to)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, records)
 }

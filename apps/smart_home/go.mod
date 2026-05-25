@@ -2,7 +2,10 @@ module smarthome
 
 go 1.22
 
-require github.com/gin-gonic/gin v1.8.2
+require (
+	github.com/gin-gonic/gin v1.8.2
+	github.com/rabbitmq/amqp091-go v1.10.0
+)
 
 require (
 	github.com/gin-contrib/sse v0.1.0 // indirect

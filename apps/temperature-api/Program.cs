@@ -57,4 +57,4 @@ app.MapGet("/temperature/{sensorId}", (string sensorId) =>
     return Results.Ok(BuildResponse(location, sensorId));
 });
 
-app.Run("http://0.0.0.0:8081");
+app.Run("http://0.0.0.0:8080");

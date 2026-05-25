@@ -17,14 +17,28 @@ import (
 
 func main() {
 	// Initialize temperature service
-	temperatureAPIURL := getEnv("TEMPERATURE_API_URL", "http://temperature-api:8081")
+	temperatureAPIURL := getEnv("TEMPERATURE_API_URL", "http://temperature-api:8080")
 	temperatureService := services.NewTemperatureService(temperatureAPIURL)
 	log.Printf("Temperature service initialized with API URL: %s\n", temperatureAPIURL)
 
 	// Initialize device service
-	deviceAPIURL := getEnv("DEVICE_API_URL", "http://device-api:8082")
+	deviceAPIURL := getEnv("DEVICE_API_URL", "http://device-api:8080")
 	deviceService := services.NewDeviceService(deviceAPIURL)
 	log.Printf("Device service initialized with API URL: %s\n", deviceAPIURL)
+
+	// Initialize RabbitMQ publisher
+	mqURL := getEnv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq/")
+	mqPublisher, err := services.NewMQPublisher(mqURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v\n", err)
+	}
+	defer mqPublisher.Close()
+	log.Printf("RabbitMQ publisher initialized with URL: %s\n", mqURL)
+
+	// Initialize telemetry service
+	telemetryAPIURL := getEnv("TELEMETRY_API_URL", "http://telemetry-api:8080")
+	telemetryService := services.NewTelemetryService(telemetryAPIURL)
+	log.Printf("Telemetry service initialized with API URL: %s\n", telemetryAPIURL)
 
 	// Initialize router
 	router := gin.Default()
@@ -40,7 +54,7 @@ func main() {
 	apiRoutes := router.Group("/api/v1")
 
 	// Register sensor routes
-	sensorHandler := handlers.NewSensorHandler(deviceService, temperatureService)
+	sensorHandler := handlers.NewSensorHandler(deviceService, temperatureService, mqPublisher, telemetryService)
 	sensorHandler.RegisterRoutes(apiRoutes)
 
 	// Start server

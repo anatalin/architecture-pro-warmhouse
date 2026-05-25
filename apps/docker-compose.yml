@@ -18,13 +18,28 @@ services:
     networks:
       - smarthome-network
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: smarthome-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - smarthome-network
+
   temperature-api:
     build:
       context: ./temperature-api
       dockerfile: Dockerfile
     container_name: smarthome-temperature-api
     ports:
-      - "8081:8081"
+      - "8081:8080"
     networks:
       - smarthome-network
 
@@ -39,7 +54,25 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8082:8082"
+      - "8082:8080"
+    networks:
+      - smarthome-network
+
+  telemetry-api:
+    build:
+      context: ./telemetry-api
+      dockerfile: Dockerfile
+    container_name: smarthome-telemetry-api
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8084:8080"
     networks:
       - smarthome-network
 
@@ -53,9 +86,15 @@ services:
         condition: service_started
       temperature-api:
         condition: service_started
+      telemetry-api:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     environment:
-      - TEMPERATURE_API_URL=http://temperature-api:8081
-      - DEVICE_API_URL=http://device-api:8082
+      - TEMPERATURE_API_URL=http://temperature-api:8080
+      - DEVICE_API_URL=http://device-api:8080
+      - TELEMETRY_API_URL=http://telemetry-api:8080
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq/
     ports:
       - "8080:8080"
     restart: unless-stopped

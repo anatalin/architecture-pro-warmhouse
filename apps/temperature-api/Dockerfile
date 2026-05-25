@@ -8,5 +8,5 @@ RUN dotnet publish -c Release -o /out
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=builder /out .
-EXPOSE 8081
+EXPOSE 8080
 ENTRYPOINT ["dotnet", "temperature-api.dll"]
