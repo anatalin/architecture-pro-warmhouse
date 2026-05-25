@@ -1,4 +1,4 @@
-@startuml C4_Components_SmartVillage
+@startuml C4_Components_SmartHome
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
 title Диаграмма компонентов (C4 Level 3) — микросервис управления устройствами
@@ -6,10 +6,13 @@ title Диаграмма компонентов (C4 Level 3) — микросе�
 LAYOUT_WITH_LEGEND()
 LAYOUT_TOP_DOWN()
 
-System_Boundary(system, "SmartVillage system") {
+System_Boundary(system, "SmartHome system") {
     Container_Boundary(devices, "Devices") {
         Component(devicesController, "Devices Controller", "", "Devices CRUD")
-        Component(deviceCommandsController, "Device Commands Controller", "", "Processes users commands sent to devices")
+        Component(heatingController, "Heating Devices Controller", "", "Handling user commands to this specific type of devices + returning devices data")
+        Component(lightingController, "Lighting Devices Controller", "", "Handling user commands to this specific type of devices + returning devices data")
+        Component(physicalEntryController, "Physical Entry Devices Controller", "", "Handling user commands to this specific type of devices + returning devices data")
+        Component(videoSurveillanceController, "Video Surveillance Devices Controller", "", "Handling user commands to this specific type of devices + returning devices data")
         Component(serviceLayer, "Service Layer", "Business logic")
         Component(repositoryLayer, "Repository Layer", "Data access logic")
         Component(devicesStateJob, "Devices State Manager Job", "","Checks and manages states of devices")
@@ -20,7 +23,12 @@ System_Boundary(system, "SmartVillage system") {
 }
 
 Rel(devicesController, serviceLayer, "Calls business logic of devices CRUD")
-Rel(deviceCommandsController, serviceLayer, "Calls business logic of handling commands")
+Rel(heatingController, serviceLayer, "Calls business logic of handling heating devices")
+Rel(lightingController, serviceLayer, "Calls business logic of handling lighting devices")
+Rel(physicalEntryController, serviceLayer, "Calls business logic of handling physical entry devices")
+Rel(videoSurveillanceController, serviceLayer, "Calls business logic of handling video surveillance devices")
+
+
 Rel(devicesStateJob, serviceLayer, "Calls business logic of handling devices state")
 Rel(serviceLayer, repositoryLayer, "Reads/Writes devices data")
 Rel(repositoryLayer, db, "Reads/Writes devices data")

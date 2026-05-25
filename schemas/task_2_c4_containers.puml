@@ -1,4 +1,4 @@
-@startuml C4_Containers_SmartVillage
+@startuml C4_Containers_SmartHome
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/refs/heads/master/C4_Container.puml
 
 title Диаграмма контейнеров (C4 Level 2) — экосистема "Умный посёлок"
@@ -9,13 +9,12 @@ LAYOUT_TOP_DOWN()
 Person(homeowner, "Владелец дома", "Пользователь системы")
 Person(support, "Саппорт", "Техническая поддержка")
 
-System_Boundary(system, "SmartVillage system") {
+System_Boundary(system, "SmartHome system") {
     Container(spa, "SPA", "Веб-интерфейс для пользователя системы")
     Container(spaAdmin, "SPA Admin", "Веб-интерфейс для технической поддержки")
     Container(apiGateway, "API Gateway", "Промежуточный API между веб-интерфейсом и внутренними микросервисами")
-    Container(users, "Users", "Микросервис управления пользователями")
+    Container(users, "Users", "Микросервис управления пользователями и списком их домов")
     Container(devices, "Devices", "Микросервис управления устройствами")
-    Container(deviceScenarios, "Scenarios", "Микросервис управления сценариями устройств")
     Container(telemetry, "Telemetry", "Микросервис телеметрии")
 
     ContainerDb(db, "Main database", "PostgreSQL", "Основная база приложения")
@@ -31,7 +30,6 @@ Rel(spa, apiGateway, "Uses", "https")
 Rel(spaAdmin, apiGateway, "Uses", "https")
 Rel(apiGateway, users, "Fetches/updates users & auth info", "https")
 Rel(apiGateway, devices, "Devices CRUD", "https")
-Rel(apiGateway, deviceScenarios, "Device scenarios CRUD", "https")
 Rel(apiGateway, telemetry, "Fetches telemetry for displaying to user", "https")
 
 Rel(users, db, "Reads/Writes users info")
@@ -39,9 +37,6 @@ Rel(users, db, "Reads/Writes users info")
 Rel(devices, db, "Reads/Writes devices")
 
 Rel(devices, partnerDevicesApi, "Fetches devices data/sends commands")
-
-Rel_R(deviceScenarios, devices, "Reads/Sends commands")
-Rel(deviceScenarios, db, "Reads/Writes scenarios")
 
 Rel(devices, telemetryQueue, "Writes")
 Rel(telemetryQueue, telemetry, "Sends")

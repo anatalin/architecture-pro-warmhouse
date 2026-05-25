@@ -126,19 +126,4 @@ CreateDeviceRequest ..> DeviceType
 DeviceDto ..> DeviceType
 Device ..> DeviceType
 
-note right of DevicesController
-  Тонкий контроллер:
-  только валидация модели,
-  маппинг HTTP <-> DTO,
-  делегирование в сервис.
-  Никакой бизнес-логики.
-end note
-
-note bottom of DeviceService
-  Здесь — оркестрация:
-  загрузка агрегата, вызов
-  доменных методов, коммит
-  через IUnitOfWork.
-end note
-
 @enduml

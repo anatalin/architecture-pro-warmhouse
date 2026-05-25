@@ -1,8 +1,8 @@
 @startuml ER_SmartHome
-' ER-диаграмма экосистемы "Умный посёлок"
+' ER-диаграмма экосистемы "Умный дом"
 ' Нотация: Crow's Foot через entity-блоки PlantUML
 
-title ER-диаграмма — экосистема "Умный посёлок"
+title ER-диаграмма — экосистема "Умный дом"
 
 hide circle
 skinparam linetype ortho

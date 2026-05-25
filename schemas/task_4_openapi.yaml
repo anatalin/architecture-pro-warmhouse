@@ -1,0 +1,426 @@
+openapi: 3.1.0
+info:
+  title: Devices API
+  description: |
+    REST API микросервиса **Devices** — управление устройствами умного дома.
+
+    Позволяет владельцу дома получать список своих устройств, читать их текущее
+    состояние, регистрировать новые устройства, изменять пользовательские
+    настройки (имя, включено/выключено) и удалять устройства.
+
+    **Аутентификация:** все эндпоинты требуют валидный JWT в заголовке
+    `Authorization: Bearer <token>`. Доступ к устройству проверяется по
+    владению домом (`House.owner_user_id`).
+
+    **Ошибки:** возвращаются в формате RFC 7807 (`application/problem+json`).
+  version: 1.0.0
+  contact:
+    name: Smart Village Platform Team
+    email: api@smart-village.example
+
+servers:
+  - url: https://api.smart-village.example/v1
+    description: Production
+  - url: https://api.staging.smart-village.example/v1
+    description: Staging
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Devices
+    description: Операции с устройствами умного дома
+
+paths:
+  /devices:
+    get:
+      tags: [Devices]
+      summary: Получить список устройств пользователя
+      description: |
+        Возвращает устройства всех домов текущего пользователя.
+        Поддерживает фильтрацию и keyset-пагинацию по `id`.
+      operationId: listDevices
+      parameters:
+        - name: houseId
+          in: query
+          description: Фильтр по дому. Если не указан — устройства всех домов пользователя.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Фильтр по текущему статусу.
+          required: false
+          schema:
+            $ref: '#/components/schemas/DeviceStatus'
+        - name: limit
+          in: query
+          description: Размер страницы (по умолчанию 50, максимум 200).
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: cursor
+          in: query
+          description: Курсор следующей страницы из поля `nextCursor` предыдущего ответа.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список устройств
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
+              examples:
+                twoDevices:
+                  summary: Два устройства, есть следующая страница
+                  value:
+                    items:
+                      - id: 'a3f1c2b4-1111-4a8e-9c2d-aaaa11112222'
+                        houseId: 'd0e1f2a3-2222-4b8e-9c2d-bbbb22223333'
+                        typeId: '11112222-3333-4444-5555-666677778888'
+                        name: 'Термостат в гостиной'
+                        serialNumber: 'TH-A1-000123'
+                        status: 'Online'
+                        isEnabled: true
+                        lastSeenAt: '2026-05-23T10:42:11Z'
+                      - id: 'b4f2c3d5-3333-4a8e-9c2d-cccc33334444'
+                        houseId: 'd0e1f2a3-2222-4b8e-9c2d-bbbb22223333'
+                        typeId: '99998888-7777-6666-5555-444433332222'
+                        name: 'Камера у ворот'
+                        serialNumber: 'CAM-B2-000777'
+                        status: 'Offline'
+                        isEnabled: true
+                        lastSeenAt: '2026-05-22T18:03:54Z'
+                    nextCursor: 'b4f2c3d5-3333-4a8e-9c2d-cccc33334444'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+    post:
+      tags: [Devices]
+      summary: Зарегистрировать новое устройство
+      description: |
+        Привязывает физическое устройство (по серийному номеру) к дому пользователя.
+        Серийный номер должен быть уникален в рамках всей системы.
+      operationId: registerDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDeviceRequest'
+            examples:
+              thermostat:
+                summary: Регистрация термостата
+                value:
+                  houseId: 'd0e1f2a3-2222-4b8e-9c2d-bbbb22223333'
+                  typeId: '11112222-3333-4444-5555-666677778888'
+                  serialNumber: 'TH-A1-000123'
+                  name: 'Термостат в гостиной'
+      responses:
+        '201':
+          description: Устройство зарегистрировано
+          headers:
+            Location:
+              description: URI созданного устройства
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Устройство с таким серийным номером уже зарегистрировано
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                duplicate:
+                  value:
+                    type: 'https://api.smart-village.example/errors/device-already-registered'
+                    title: 'Device already registered'
+                    status: 409
+                    detail: 'Device with serialNumber TH-A1-000123 is already registered.'
+                    instance: '/v1/devices'
+
+  /devices/{deviceId}:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+
+    get:
+      tags: [Devices]
+      summary: Получить устройство по id
+      description: Возвращает полную информацию об устройстве, включая `parameters` и `lastSeenAt`.
+      operationId: getDevice
+      responses:
+        '200':
+          description: Устройство найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                thermostat:
+                  value:
+                    id: 'a3f1c2b4-1111-4a8e-9c2d-aaaa11112222'
+                    houseId: 'd0e1f2a3-2222-4b8e-9c2d-bbbb22223333'
+                    typeId: '11112222-3333-4444-5555-666677778888'
+                    name: 'Термостат в гостиной'
+                    serialNumber: 'TH-A1-000123'
+                    status: 'Online'
+                    isEnabled: true
+                    parameters:
+                      targetTemperatureC: 22.5
+                      mode: 'heat'
+                    lastSeenAt: '2026-05-23T10:42:11Z'
+                    registeredAt: '2026-03-10T08:00:00Z'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    patch:
+      tags: [Devices]
+      summary: Изменить настройки устройства
+      description: |
+        Изменяет **пользовательские настройки** устройства в нашей БД: имя и флаг
+        `isEnabled` (разрешено ли управление).
+
+        Все поля опциональны; передавайте только те, что хотите изменить.
+      operationId: updateDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeviceRequest'
+            examples:
+              rename:
+                summary: Переименование
+                value:
+                  name: 'Термостат — спальня родителей'
+              disable:
+                summary: Временно запретить управление
+                value:
+                  isEnabled: false
+      responses:
+        '200':
+          description: Устройство обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    delete:
+      tags: [Devices]
+      summary: Удалить (отвязать) устройство
+      description: Удаляет привязку устройства к дому. Серийный номер освобождается.
+      operationId: deleteDevice
+      responses:
+        '204':
+          description: Устройство удалено
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      description: UUID устройства
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    DeviceStatus:
+      type: string
+      enum: [Online, Offline, Error]
+      description: |
+        Текущий статус устройства, определяется по последним полученным
+        событиям телеметрии. `Error` — устройство онлайн, но рапортует ошибку.
+
+    Device:
+      type: object
+      required: [id, houseId, typeId, name, serialNumber, status, isEnabled, registeredAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        houseId:
+          type: string
+          format: uuid
+        typeId:
+          type: string
+          format: uuid
+          description: Ссылка на справочник `DeviceType`
+        name:
+          type: string
+          maxLength: 200
+          description: Пользовательское имя устройства
+        serialNumber:
+          type: string
+          maxLength: 128
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        isEnabled:
+          type: boolean
+          description: Разрешено ли управление устройством
+        parameters:
+          type: object
+          description: |
+            Произвольный объект с параметрами устройства. Схема зависит от
+            `DeviceType.parametersSchema` (валидируется на сервере).
+          additionalProperties: true
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Время последнего полученного события от устройства
+        registeredAt:
+          type: string
+          format: date-time
+
+    DeviceListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+        nextCursor:
+          type: string
+          nullable: true
+          description: |
+            Курсор для запроса следующей страницы. `null` или отсутствует, если
+            страниц больше нет.
+
+    RegisterDeviceRequest:
+      type: object
+      required: [houseId, typeId, serialNumber, name]
+      properties:
+        houseId:
+          type: string
+          format: uuid
+        typeId:
+          type: string
+          format: uuid
+        serialNumber:
+          type: string
+          minLength: 1
+          maxLength: 128
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+
+    UpdateDeviceRequest:
+      type: object
+      description: Все поля опциональны. Передавайте только те, что нужно изменить.
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        isEnabled:
+          type: boolean
+
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        traceId:
+          type: string
+          description: ID трассировки для диагностики
+
+  responses:
+    BadRequest:
+      description: Невалидный запрос (валидация полей, неверный формат)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            validation:
+              value:
+                type: 'https://api.smart-village.example/errors/validation'
+                title: 'Validation failed'
+                status: 400
+                detail: 'name: must be between 1 and 200 characters'
+                traceId: '00-abc123-def456-01'
+
+    Unauthorized:
+      description: Отсутствует или невалидный JWT
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            unauthorized:
+              value:
+                type: 'https://api.smart-village.example/errors/unauthorized'
+                title: 'Unauthorized'
+                status: 401
+                detail: 'Bearer token is missing or invalid.'
+
+    Forbidden:
+      description: Пользователь не является владельцем дома, в котором находится устройство
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            forbidden:
+              value:
+                type: 'https://api.smart-village.example/errors/forbidden'
+                title: 'Forbidden'
+                status: 403
+                detail: 'You do not have access to this device.'
+
+    NotFound:
+      description: Устройство не найдено
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            notFound:
+              value:
+                type: 'https://api.smart-village.example/errors/device-not-found'
+                title: 'Device not found'
+                status: 404
+                detail: 'Device with id a3f1c2b4-1111-4a8e-9c2d-aaaa11112222 does not exist.'
