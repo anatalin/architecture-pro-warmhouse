@@ -8,7 +8,7 @@
 
 Чтобы составить документ с описанием текущей архитектуры приложения, можно часть информации взять из описания компании и условия задания. Это нормально.
 
-</aside
+</aside>
 
 ### 1. Описание функциональности монолитного приложения
 
@@ -62,9 +62,7 @@
 
 ### 5. Визуализация контекста системы — диаграмма С4
 
-```markdown
 [Диаграмма контекста в модели C4](https://raw.githubusercontent.com/anatalin/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/task_1_c4_context.puml)
-```
 
 # Задание 2. Проектирование микросервисной архитектуры
 
@@ -80,7 +78,7 @@
 
 **Диаграмма кода (Code)**
 
-[Диаграмма кода контроллера devicesController микросервиса devices](https://github.com/anatalin/architecture-pro-warmhouse/blob/warmhouse/schemas/task_2_c4_code_devicesController.puml)
+[Диаграмма кода контроллера devicesController микросервиса devices](https://raw.githubusercontent.com/anatalin/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/task_2_c4_code_devicesController.puml)
 
 # Задание 3. Разработка ER-диаграммы
 
@@ -94,7 +92,7 @@
 
 ### 2. Документация API
 
-Здесь приложите ссылки на документацию API для микросервисов, которые вы спроектировали в первой части проектной работы. Для документирования используйте Swagger/OpenAPI или AsyncAPI.
+[Спецификация OpenAPI](https://raw.githubusercontent.com/anatalin/architecture-pro-warmhouse/refs/heads/warmhouse/schemas/task_4_openapi.yaml)
 
 # Задание 5. Работа с docker и docker-compose
 
