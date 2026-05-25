@@ -1,0 +1,27 @@
+@startuml C4_Components_SmartVillage
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Диаграмма компонентов (C4 Level 3) — микросервис управления устройствами
+
+LAYOUT_WITH_LEGEND()
+LAYOUT_TOP_DOWN()
+
+System_Boundary(system, "SmartVillage system") {
+    Container_Boundary(devices, "Devices") {
+        Component(devicesController, "Devices Controller", "", "Devices CRUD")
+        Component(deviceCommandsController, "Device Commands Controller", "", "Processes users commands sent to devices")
+        Component(serviceLayer, "Service Layer", "Business logic")
+        Component(repositoryLayer, "Repository Layer", "Data access logic")
+        Component(devicesStateJob, "Devices State Manager Job", "","Checks and manages states of devices")
+    }
+
+    ComponentQueue_Ext(telemetryQueue, "Telemetry queue")
+    ComponentDb(db, "Main database", "PostgreSQL", "Основная база приложения")
+}
+
+Rel(devicesController, serviceLayer, "Calls business logic of devices CRUD")
+Rel(deviceCommandsController, serviceLayer, "Calls business logic of handling commands")
+Rel(devicesStateJob, serviceLayer, "Calls business logic of handling devices state")
+Rel(serviceLayer, repositoryLayer, "Reads/Writes devices data")
+Rel(repositoryLayer, db, "Reads/Writes devices data")
+Rel(serviceLayer, telemetryQueue, "Sends devices telemetry")

@@ -1,0 +1,83 @@
+@startuml ER_SmartHome
+' ER-диаграмма экосистемы "Умный посёлок"
+' Нотация: Crow's Foot через entity-блоки PlantUML
+
+title ER-диаграмма — экосистема "Умный посёлок"
+
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 5
+skinparam class {
+    BackgroundColor #FEFEFE
+    BorderColor #2C3E50
+    ArrowColor #2C3E50
+}
+
+' ==================== Пользователи и дома ====================
+entity "User" as user {
+    * id : UUID <<PK>>
+    --
+    * email : varchar(255) <<unique>>
+    * password_hash : varchar(255)
+    * full_name : varchar(200)
+    phone : varchar(32)
+    * created_at : timestamptz
+    * is_active : bool
+}
+
+entity "House" as house {
+    * id : UUID <<PK>>
+    --
+    * owner_user_id : UUID <<FK -> User>>
+    * name : varchar(200)
+    address : varchar(500)
+    timezone : varchar(64)
+    * created_at : timestamptz
+}
+
+' ==================== Устройства ====================
+entity "DeviceType" as devType {
+    * id : UUID <<PK>>
+    --
+    * code : varchar(64) <<unique>>
+    * name : varchar(200)
+    * category : enum (Thermostat, LightSwitch,
+        Gate, Camera, Sensor, Relay)
+    * protocol : enum (MQTT, Zigbee, ZWave, HTTP)
+    parameters_schema : jsonb
+}
+
+entity "Device" as device {
+    * id : UUID <<PK>>
+    --
+    * house_id : UUID <<FK -> House>>
+    * type_id : UUID <<FK -> DeviceType>>
+    * serial_number : varchar(128) <<unique>>
+    * name : varchar(200)
+    * status : enum (Online, Offline, Error)
+    * is_enabled : bool
+    parameters : jsonb
+    last_seen_at : timestamptz
+    * registered_at : timestamptz
+}
+
+' ==================== Телеметрия ====================
+entity "TelemetryData" as telemetry {
+    * id : BIGINT <<PK>>
+    --
+    * device_id : UUID <<FK -> Device>>
+    * recorded_at : timestamptz
+    * metric : varchar(64)
+    value_num : double
+    value_text : varchar(500)
+    --
+    INDEX (device_id, recorded_at DESC)
+}
+
+' ==================== Связи ====================
+user  ||--o{ house     : "владеет"
+house ||--o{ device    : "содержит"
+devType ||--o{ device  : "классифицирует"
+device ||--o{ telemetry : "генерирует"
+
+@enduml

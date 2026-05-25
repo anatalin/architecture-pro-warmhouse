@@ -1,0 +1,144 @@
+@startuml C4_Code_DevicesController
+' C4 Level 4 — Code (UML class diagram) для DevicesController
+' Показывает реальные классы, интерфейсы и их связи
+
+title C4 Level 4 (Code) — DevicesController и его окружение
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+hide empty members
+
+' ==================== API Layer ====================
+package "Api.Controllers" <<Rectangle>> {
+    class DevicesController <<ApiController>> {
+        - _deviceService : IDeviceService
+        - _logger : ILogger<DevicesController>
+        + DevicesController(svc, logger)
+        + GetAll(ct) : Task<ActionResult<IEnumerable<DeviceDto>>>
+        + GetById(id, ct) : Task<ActionResult<DeviceDto>>
+        + Create(request, ct) : Task<ActionResult<DeviceDto>>
+        + Update(id, request, ct) : Task<IActionResult>
+        + Delete(id, ct) : Task<IActionResult>
+    }
+}
+
+' ==================== Contracts (DTO / Requests) ====================
+package "Api.Contracts" <<Rectangle>> {
+    class DeviceDto {
+        + Id : Guid
+        + Name : string
+        + Type : DeviceType
+        + IsOnline : bool
+        + LastSeenAt : DateTimeOffset?
+    }
+    class CreateDeviceRequest {
+        + Name : string
+        + Type : DeviceType
+        + ExternalId : string
+    }
+    class UpdateDeviceRequest {
+        + Name : string
+    }
+    enum DeviceType {
+        Thermostat
+        LightSwitch
+        Gate
+        Camera
+    }
+}
+
+' ==================== Application Layer ====================
+package "Application.Devices" <<Rectangle>> {
+    interface IDeviceService {
+        + ListAsync(ct) : Task<IReadOnlyList<DeviceDto>>
+        + GetAsync(id, ct) : Task<DeviceDto?>
+        + CreateAsync(req, ct) : Task<DeviceDto>
+        + RenameAsync(id, name, ct) : Task
+        + DeleteAsync(id, ct) : Task
+    }
+    class DeviceService {
+        - _repo : IDeviceRepository
+        - _uow : IUnitOfWork
+        - _mapper : IDeviceMapper
+        + ListAsync(ct)
+        + GetAsync(id, ct)
+        + CreateAsync(req, ct)
+        + RenameAsync(id, name, ct)
+        + DeleteAsync(id, ct)
+    }
+}
+
+' ==================== Domain ====================
+package "Domain.Devices" <<Rectangle>> {
+    class Device <<entity, aggregate root>> {
+        + Id : Guid
+        + Name : string
+        + Type : DeviceType
+        + ExternalId : string
+        + IsOnline : bool
+        + Rename(newName)
+    }
+    interface IDeviceRepository {
+        + GetAsync(id, ct) : Task<Device?>
+        + ListAsync(ct) : Task<IReadOnlyList<Device>>
+        + Add(device)
+        + Remove(device)
+    }
+    interface IUnitOfWork {
+        + SaveChangesAsync(ct) : Task
+    }
+}
+
+' ==================== Infrastructure ====================
+package "Infrastructure.Persistence" <<Rectangle>> {
+    class DeviceRepository {
+        - _db : SmartHomeDbContext
+        + GetAsync(id, ct)
+        + ListAsync(ct)
+        + Add(device)
+        + Remove(device)
+    }
+    class SmartHomeDbContext <<EF Core DbContext>> {
+        + Devices : DbSet<Device>
+        + SaveChangesAsync(ct)
+    }
+}
+
+' ==================== Связи ====================
+DevicesController ..> IDeviceService : uses
+DevicesController ..> DeviceDto : returns
+DevicesController ..> CreateDeviceRequest : accepts
+DevicesController ..> UpdateDeviceRequest : accepts
+
+IDeviceService <|.. DeviceService : implements
+DeviceService ..> IDeviceRepository : uses
+DeviceService ..> IUnitOfWork : uses
+DeviceService ..> Device : maps from/to
+DeviceService ..> DeviceDto : produces
+
+IDeviceRepository <|.. DeviceRepository : implements
+IUnitOfWork <|.. SmartHomeDbContext : implements
+DeviceRepository ..> SmartHomeDbContext : queries via EF Core
+DeviceRepository ..> Device : returns
+
+CreateDeviceRequest ..> DeviceType
+DeviceDto ..> DeviceType
+Device ..> DeviceType
+
+note right of DevicesController
+  Тонкий контроллер:
+  только валидация модели,
+  маппинг HTTP <-> DTO,
+  делегирование в сервис.
+  Никакой бизнес-логики.
+end note
+
+note bottom of DeviceService
+  Здесь — оркестрация:
+  загрузка агрегата, вызов
+  доменных методов, коммит
+  через IUnitOfWork.
+end note
+
+@enduml

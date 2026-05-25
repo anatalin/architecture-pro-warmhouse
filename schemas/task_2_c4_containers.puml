@@ -1,0 +1,49 @@
+@startuml C4_Containers_SmartVillage
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/refs/heads/master/C4_Container.puml
+
+title Диаграмма контейнеров (C4 Level 2) — экосистема "Умный посёлок"
+
+LAYOUT_WITH_LEGEND()
+LAYOUT_TOP_DOWN()
+
+Person(homeowner, "Владелец дома", "Пользователь системы")
+Person(support, "Саппорт", "Техническая поддержка")
+
+System_Boundary(system, "SmartVillage system") {
+    Container(spa, "SPA", "Веб-интерфейс для пользователя системы")
+    Container(spaAdmin, "SPA Admin", "Веб-интерфейс для технической поддержки")
+    Container(apiGateway, "API Gateway", "Промежуточный API между веб-интерфейсом и внутренними микросервисами")
+    Container(users, "Users", "Микросервис управления пользователями")
+    Container(devices, "Devices", "Микросервис управления устройствами")
+    Container(deviceScenarios, "Scenarios", "Микросервис управления сценариями устройств")
+    Container(telemetry, "Telemetry", "Микросервис телеметрии")
+
+    ContainerDb(db, "Main database", "PostgreSQL", "Основная база приложения")
+    ContainerDb(telemetryDb, "Telemetry database", "Clickhouse", "Хранит телеметрию устройств")
+    ContainerQueue(telemetryQueue, "Telemetry queue", "RabbitMQ", "Очередь отправки телеметрии")
+}
+
+Container_Ext(partnerDevicesApi, "Partners devices API", "API устройств партнёров")
+
+Rel(homeowner, spa, "Uses", "https")
+Rel(support, spaAdmin, "Uses", "https")
+Rel(spa, apiGateway, "Uses", "https")
+Rel(spaAdmin, apiGateway, "Uses", "https")
+Rel(apiGateway, users, "Fetches/updates users & auth info", "https")
+Rel(apiGateway, devices, "Devices CRUD", "https")
+Rel(apiGateway, deviceScenarios, "Device scenarios CRUD", "https")
+Rel(apiGateway, telemetry, "Fetches telemetry for displaying to user", "https")
+
+Rel(users, db, "Reads/Writes users info")
+
+Rel(devices, db, "Reads/Writes devices")
+
+Rel(devices, partnerDevicesApi, "Fetches devices data/sends commands")
+
+Rel_R(deviceScenarios, devices, "Reads/Sends commands")
+Rel(deviceScenarios, db, "Reads/Writes scenarios")
+
+Rel(devices, telemetryQueue, "Writes")
+Rel(telemetryQueue, telemetry, "Sends")
+Rel(telemetry, telemetryDb, "Reads/Writes")
+
