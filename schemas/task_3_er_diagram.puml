@@ -28,11 +28,18 @@ entity "User" as user {
 entity "House" as house {
     * id : UUID <<PK>>
     --
-    * owner_user_id : UUID <<FK -> User>>
     * name : varchar(200)
     address : varchar(500)
     timezone : varchar(64)
     * created_at : timestamptz
+}
+
+entity "UserHouse" as userHouse {
+    * user_id : UUID <<PK, FK -> User>>
+    * house_id : UUID <<PK, FK -> House>>
+    --
+    * role : enum (Owner, Member)
+    * joined_at : timestamptz
 }
 
 ' ==================== Устройства ====================
@@ -75,7 +82,8 @@ entity "TelemetryData" as telemetry {
 }
 
 ' ==================== Связи ====================
-user  ||--o{ house     : "владеет"
+user  ||--o{ userHouse  : "участвует"
+house ||--o{ userHouse  : "имеет участников"
 house ||--o{ device    : "содержит"
 devType ||--o{ device  : "классифицирует"
 device ||--o{ telemetry : "генерирует"

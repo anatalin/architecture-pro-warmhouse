@@ -1,5 +1,11 @@
 @startuml C4_Containers_SmartHome
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/refs/heads/master/C4_Container.puml
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons
+
+!include DEVICONS/react.puml
+!include DEVICONS/postgresql.puml
+!include DEVICONS/go.puml
+!include DEVICONS/dotnet.puml
 
 title Диаграмма контейнеров (C4 Level 2) — экосистема "Умный посёлок"
 
@@ -10,14 +16,14 @@ Person(homeowner, "Владелец дома", "Пользователь сис�
 Person(support, "Саппорт", "Техническая поддержка")
 
 System_Boundary(system, "SmartHome system") {
-    Container(spa, "SPA", "Веб-интерфейс для пользователя системы")
-    Container(spaAdmin, "SPA Admin", "Веб-интерфейс для технической поддержки")
-    Container(apiGateway, "API Gateway", "Промежуточный API между веб-интерфейсом и внутренними микросервисами")
-    Container(users, "Users", "Микросервис управления пользователями и списком их домов")
-    Container(devices, "Devices", "Микросервис управления устройствами")
-    Container(telemetry, "Telemetry", "Микросервис телеметрии")
+    Container(spa, "SPA", "React", "Веб-интерфейс для пользователя системы", $sprite="react")
+    Container(spaAdmin, "SPA Admin", "React", "Веб-интерфейс для технической поддержки", $sprite="react")
+    Container(apiGateway, "API Gateway", "Go", "Промежуточный API между веб-интерфейсом и внутренними микросервисами", $sprite="go")
+    Container(users, "Users", ".NET", "Микросервис управления пользователями и списком их домов", $sprite="dotnet")
+    Container(devices, "Devices", ".NET", "Микросервис управления устройствами", $sprite="dotnet")
+    Container(telemetry, "Telemetry", "Go", "Микросервис телеметрии", $sprite="go")
 
-    ContainerDb(db, "Main database", "PostgreSQL", "Основная база приложения")
+    ContainerDb(db, "Main database", "PostgreSQL", "Основная база приложения", $sprite="postgresql")
     ContainerDb(telemetryDb, "Telemetry database", "Clickhouse", "Хранит телеметрию устройств")
     ContainerQueue(telemetryQueue, "Telemetry queue", "RabbitMQ", "Очередь отправки телеметрии")
 }
