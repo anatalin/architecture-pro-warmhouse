@@ -21,3 +21,15 @@ CREATE TABLE IF NOT EXISTS sensors (
 CREATE INDEX IF NOT EXISTS idx_sensors_type ON sensors(type);
 CREATE INDEX IF NOT EXISTS idx_sensors_location ON sensors(location);
 CREATE INDEX IF NOT EXISTS idx_sensors_status ON sensors(status);
+
+-- Create the telemetry table
+CREATE TABLE IF NOT EXISTS telemetry (
+    id          SERIAL PRIMARY KEY,
+    sensor_id   INTEGER NOT NULL,
+    value       FLOAT   NOT NULL,
+    status      VARCHAR(20) NOT NULL,
+    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_telemetry_sensor_id   ON telemetry(sensor_id);
+CREATE INDEX IF NOT EXISTS idx_telemetry_recorded_at ON telemetry(recorded_at);

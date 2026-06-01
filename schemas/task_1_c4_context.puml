@@ -1,0 +1,19 @@
+@startuml C4_Context_SmartHome
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Диаграмма контекста (C4 Level 1) — экосистема "Умный дом"
+
+LAYOUT_WITH_LEGEND()
+LAYOUT_TOP_DOWN()
+
+Person(homeowner, "Владелец дома", "Пользователь системы")
+
+System(ecosystem, "Экосистема 'Умный дом'", "SaaS-платформа: управление отоплением")
+
+System_Ext(sensors, "Датчики температуры", "Датчики, отдающие информацию о температуре и поддерживающие установку целевой температуры")
+
+Rel(homeowner, ecosystem, "Управляет устройствами, просматривает температуру", "HTTP API")
+
+Rel_Neighbor(ecosystem, sensors, "Получает показатели температуры, устанавливает целевое значение температуры", "HTTP API")
+
+@enduml
